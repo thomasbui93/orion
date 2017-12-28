@@ -1,7 +1,7 @@
 from mars.models import Note, Notebook, Tag
 from django.http import JsonResponse
 from mars.serializers import NotebookSerializer, NoteThumbSerializer
-from rest_framework.decorators import api_view,authentication_classes, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -10,12 +10,14 @@ from rest_framework.permissions import IsAuthenticated
 
 
 @authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes(IsAuthenticated)
 @api_view(['GET', 'POST'])
 def index(request):
+
     if request.method == 'GET':
         current_user = request.user
         notebooks = Notebook.objects.filter(user=current_user.id)
-        serializer = NotebookSerializer(notebooks, many=True)
+        serializer = NotebookSerializer(notebooks, many=True,  context={'request': request})
         return Response(serializer.data)
     elif request.method == 'POST':
         serializer = NotebookSerializer(data=request.data, context={'request': request})
@@ -37,10 +39,10 @@ def entry(request, notebook_key):
         return Response(status=404)
 
     if request.method == 'GET':
-        serializer = NotebookSerializer(notebook)
+        serializer = NotebookSerializer(notebook, context={'request': request})
 
         notes_list = Note.objects.filter(notebook=notebook, user=current_user.id)
-        paginator = Paginator(notes_list, 25)
+        paginator = Paginator(notes_list, 5)
         page = request.GET.get('page')
 
         try:
@@ -50,11 +52,15 @@ def entry(request, notebook_key):
         except EmptyPage:
             notes = paginator.page(paginator.num_pages)
 
-        note_serializer = NoteThumbSerializer(notes, many=True)
+        note_serializer = NoteThumbSerializer(notes, many=True, context={'request': request})
 
         return JsonResponse({
             'notebook': serializer.data,
-            'notes': note_serializer.data
+            'notes': note_serializer.data,
+            'pagination': {
+                'count': paginator.count,
+                'pages': paginator.num_pages
+            }
         })
 
     elif request.method == 'PUT':

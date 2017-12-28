@@ -1,19 +1,22 @@
 from mars.models import Note
+from django.http import JsonResponse
 from mars.serializers import NoteSerializer, NoteThumbSerializer
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 
-@login_required()
+@authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes(IsAuthenticated)
 @api_view(['GET', 'POST'])
 def index(request):
     if request.method == 'GET':
         current_user = request.user
         notes_list = Note.objects.filter(user=current_user.id)
-        paginator = Paginator(notes_list, 25)
+        paginator = Paginator(notes_list, 5)
         page = request.GET.get('page')
 
         try:
@@ -23,18 +26,19 @@ def index(request):
         except EmptyPage:
             notes = paginator.page(paginator.num_pages)
 
-        serializer = NoteThumbSerializer(notes, many=True)
+        serializer = NoteThumbSerializer(notes, many=True,  context={'request': request})
 
         return Response(serializer.data)
     elif request.method == 'POST':
-        serializer = NoteSerializer(data=request.data)
+        serializer = NoteSerializer(data=request.data,  context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@login_required()
+@authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes(IsAuthenticated)
 @api_view(['GET', 'PUT', 'DELETE'])
 def entry(request, note_key):
     try:
@@ -48,8 +52,7 @@ def entry(request, note_key):
         return Response(serializer.data)
 
     elif request.method == 'PUT':
-
-        serializer = NoteSerializer(note, data=request.data)
+        serializer = NoteSerializer(note, data=request.data, context={'request': request}, partial=True)
 
         if serializer.is_valid():
             serializer.save()
@@ -62,4 +65,7 @@ def entry(request, note_key):
 
         note.delete()
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return JsonResponse({
+            'status': True
+        })
+

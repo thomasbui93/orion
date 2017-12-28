@@ -5,6 +5,8 @@ from rest_framework import status
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 
 @api_view(['GET'])
@@ -14,16 +16,17 @@ def get_me(request):
     return Response(serializer.data)
 
 
-@api_view(['POST'])
+@csrf_exempt
 def login_attempt(request):
-    username = request.POST['username']
-    password = request.POST['password']
+    body = json.loads(request.body.decode('utf-8'))
+    username = body['username'] if 'username' in body else None
+    password = body['password'] if 'password' in body else None
     user = authenticate(request, username=username, password=password)
 
     if user is not None:
         login(request, user)
         token, _ = Token.objects.get_or_create(user=user)
-        return Response({"token": token.key})
+        return JsonResponse({"token": token.key}, status=status.HTTP_200_OK)
     else:
         return JsonResponse({'message': 'Failed to authenticate.'}, status=status.HTTP_401_UNAUTHORIZED)
 
