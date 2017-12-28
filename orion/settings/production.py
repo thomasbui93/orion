@@ -11,7 +11,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {
-            'read_default_file': '/home/bdk93/my.cnf',
+            'read_default_file': '/home/bdk93/.my.cnf',
         },
     }
 }
