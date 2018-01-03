@@ -1,14 +1,18 @@
 from mars.models import Note, Notebook, Tag
 from django.http import JsonResponse
-from mars.serializers import TagSerializer, NoteThumbSerializer
-from rest_framework.decorators import api_view
+from mars.serializers import TagSerializer, TagThumbSerializer, NoteThumbSerializer
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 
-@login_required()
+@authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes(IsAuthenticated)
 @api_view(['GET', 'POST'])
 def index(request):
     if request.method == 'GET':
@@ -24,8 +28,29 @@ def index(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@login_required()
-@api_view(['GET', 'PUT', 'DELETE'])
+@authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes(IsAuthenticated)
+@api_view(['GET'])
+def search(request):
+
+    tags = Tag.objects.filter(user=request.user.id, title__contains=request.GET.get('query', default=''))
+    paginator = Paginator(tags, 5)
+    page = request.GET.get('page', 1)
+
+    try:
+        tag_list = paginator.page(page)
+    except PageNotAnInteger:
+        tag_list = paginator.page(1)
+    except EmptyPage:
+        tag_list = paginator.page(paginator.num_pages)
+
+    serializer = TagThumbSerializer(tag_list, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
+@authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes(IsAuthenticated)
+@api_view(['GET', 'POST'])
 def entry(request, tag_key):
     try:
         current_user = request.user

@@ -11,12 +11,28 @@ class NotebookSerializer(serializers.ModelSerializer):
         fields = ('title', 'key', 'created_date', 'updated_date', 'user')
 
 
+class NotebookThumbSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(default=CurrentUserDefault(), read_only=True)
+
+    class Meta:
+        model = Notebook
+        fields = ('title', 'key', 'user')
+
+
 class TagSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(default=CurrentUserDefault(), read_only=True)
 
     class Meta:
         model = Tag
         fields = ('title', 'key', 'created_date', 'updated_date', 'user')
+
+
+class TagThumbSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(default=CurrentUserDefault(), read_only=True)
+
+    class Meta:
+        model = Tag
+        fields = ('title', 'key', 'user')
 
 
 class NoteSerializer(serializers.ModelSerializer):

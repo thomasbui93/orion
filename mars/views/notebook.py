@@ -1,6 +1,6 @@
-from mars.models import Note, Notebook, Tag
+from mars.models import Note, Notebook
 from django.http import JsonResponse
-from mars.serializers import NotebookSerializer, NoteThumbSerializer
+from mars.serializers import NotebookSerializer, NoteThumbSerializer, NotebookThumbSerializer
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -25,6 +25,26 @@ def index(request):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@authentication_classes((SessionAuthentication, BasicAuthentication))
+@permission_classes(IsAuthenticated)
+@api_view(['GET'])
+def search(request):
+
+    notebooks = Notebook.objects.filter(user=request.user.id, title__contains=request.GET.get('query', default=''))
+    paginator = Paginator(notebooks, 5)
+    page = request.GET.get('page', 1)
+
+    try:
+        notebook_list = paginator.page(page)
+    except PageNotAnInteger:
+        notebook_list = paginator.page(1)
+    except EmptyPage:
+        notebook_list = paginator.page(paginator.num_pages)
+
+    serializer = NotebookThumbSerializer(notebook_list, many=True, context={'request': request})
+    return Response(serializer.data)
 
 
 @authentication_classes((SessionAuthentication, BasicAuthentication))

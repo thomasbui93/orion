@@ -17,7 +17,7 @@ def index(request):
         current_user = request.user
         notes_list = Note.objects.filter(user=current_user.id)
         paginator = Paginator(notes_list, 5)
-        page = request.GET.get('page')
+        page = request.GET.get('page', 1)
 
         try:
             notes = paginator.page(page)
@@ -35,6 +35,9 @@ def index(request):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 @authentication_classes((SessionAuthentication, BasicAuthentication))
